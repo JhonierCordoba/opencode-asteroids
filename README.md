@@ -29,6 +29,7 @@ Luego visita `http://localhost:3000`.
 | `←` `→`   | Rotar nave |
 | `↑`       | Propulsar  |
 | `Espacio` | Disparar   |
+| `Tabulador` | Cambiar la skin de la nave |
 
 ## Puntuación
 
@@ -43,3 +44,5 @@ Luego visita `http://localhost:3000`.
 - 3 vidas con invencibilidad temporal al reaparecer (parpadeo)
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
+- Power-ups aleatorios: velocidad (2x), escudo temporal que destruye asteroides al contacto y triple disparo
+- Skins de la nave (4 siluetas distintas) con `Tabulador`; la elección se guarda en `localStorage`
