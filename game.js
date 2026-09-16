@@ -63,15 +63,24 @@ const SPEEDS = [0, 85, 55, 32];   // velocidad base por tamaño
 const POINTS = [0, 100, 50, 20];  // puntos por tamaño
 
 class Asteroid {
-  constructor(x, y, size = 3) {
+  constructor(x, y, size = 3, fallingStar = false) {
     this.x    = x;
     this.y    = y;
     this.size = size;
-    this.radius = RADII[size];
     this.dead = false;
 
+    this.fallingStar = fallingStar;
+    this.ttl = fallingStar ? 10 : null;
+    this.trail = [];
+
+    if (fallingStar) {
+      this.radius = RADII[size] * 0.5;
+    } else {
+      this.radius = RADII[size];
+    }
+
     const angle = rand(0, Math.PI * 2);
-    const speed = SPEEDS[size] + rand(-15, 15);
+    const speed = (SPEEDS[size] + rand(-15, 15)) * (fallingStar ? 2.5 : 1);
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
     this.rotSpeed = rand(-1.2, 1.2);
@@ -88,13 +97,19 @@ class Asteroid {
   }
 
   update(dt) {
+    if (this.fallingStar) {
+      this.ttl -= dt;
+      if (this.ttl <= 0) { this.dead = true; return; }
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > 12) this.trail.shift();
+    }
     this.x   = wrap(this.x + this.vx * dt, W);
     this.y   = wrap(this.y + this.vy * dt, H);
     this.rot += this.rotSpeed * dt;
   }
 
   split() {
-    if (this.size <= 1) return [];
+    if (this.fallingStar || this.size <= 1) return [];
     return [
       new Asteroid(this.x, this.y, this.size - 1),
       new Asteroid(this.x, this.y, this.size - 1),
@@ -102,11 +117,23 @@ class Asteroid {
   }
 
   draw() {
+    if (this.fallingStar) {
+      for (let i = 0; i < this.trail.length; i++) {
+        const alpha = (i / this.trail.length) * 0.5;
+        const t = this.trail[i];
+        ctx.fillStyle = `rgba(255,220,0,${alpha.toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, this.radius * 0.4 * (i / this.trail.length), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowColor = '#ffcc00';
+      ctx.shadowBlur  = 14;
+    }
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rot);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth   = 1.5;
+    ctx.strokeStyle = this.fallingStar ? '#ffcc00' : '#fff';
+    ctx.lineWidth   = this.fallingStar ? 2 : 1.5;
     ctx.lineJoin    = 'round';
     ctx.beginPath();
     ctx.moveTo(this.verts[0][0], this.verts[0][1]);
@@ -115,6 +142,7 @@ class Asteroid {
     ctx.closePath();
     ctx.stroke();
     ctx.restore();
+    if (this.fallingStar) ctx.shadowBlur = 0;
   }
 }
 
@@ -249,7 +277,8 @@ function spawnAsteroids(count) {
       x = rand(0, W);
       y = rand(0, H);
     } while (Math.hypot(x - W / 2, y - H / 2) < SAFE_DIST);
-    asteroids.push(new Asteroid(x, y, 3));
+    const isStar = Math.random() < 0.08;
+    asteroids.push(new Asteroid(x, y, 3, isStar));
   }
 }
 
@@ -327,7 +356,7 @@ function update(dt) {
       if (!a.dead && !b.dead && dist(b, a) < a.radius) {
         b.dead = true;
         a.dead = true;
-        score += POINTS[a.size];
+        score += a.fallingStar ? 200 : POINTS[a.size];
         explode(a.x, a.y, a.size * 5);
         newAsteroids.push(...a.split());
       }
