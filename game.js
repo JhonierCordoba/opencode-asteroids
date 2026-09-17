@@ -157,7 +157,7 @@ class Ship {
     this.angle  = -Math.PI / 2;
     this.vx     = 0;
     this.vy     = 0;
-    this.radius = 12;
+    this.radius = 12 * SKINS[skinIndex].scale;
     this.thrusting       = false;
     this.invincible      = 3;
     this.shootCooldown   = 0;
@@ -224,7 +224,7 @@ collectShield() {
   tryShoot() {
     if (this.shootCooldown > 0 || this.dead) return [];
     this.shootCooldown = 0.2;
-    const NOSE = 21;
+    const NOSE = 21 * SKINS[skinIndex].scale;
     const ox = this.x + Math.cos(this.angle) * NOSE;
     const oy = this.y + Math.sin(this.angle) * NOSE;
     if (this.tripleShotTimer > 0) {
@@ -248,6 +248,7 @@ collectShield() {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
+    ctx.scale(skin.scale, skin.scale);
     ctx.strokeStyle = skin.stroke;
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
@@ -279,7 +280,7 @@ collectShield() {
       ctx.shadowColor = '#0ff';
       ctx.shadowBlur  = 12;
       ctx.beginPath();
-      ctx.arc(0, 0, 18, 0, Math.PI * 2);
+      ctx.arc(0, 0, 18 * skin.scale, 0, Math.PI * 2);
       ctx.stroke();
       ctx.shadowBlur = 0;
       ctx.restore();
@@ -412,6 +413,8 @@ const SKINS = [
     name: 'CLÁSICA',
     stroke: '#fff',
     flame: 'rgba(255, 130, 0, 0.85)',
+    scale: 1,
+    pointsMultiplier: 1,
     body(ctx) {
       ctx.beginPath();
       ctx.moveTo( 20,  0);   // nariz
@@ -427,6 +430,8 @@ const SKINS = [
     name: 'AGUIJÓN',
     stroke: '#4fd8ff',
     flame: 'rgba(0, 200, 255, 0.9)',
+    scale: 1,
+    pointsMultiplier: 1,
     body(ctx) {
       ctx.beginPath();
       ctx.moveTo( 22,  0);   // nariz
@@ -444,6 +449,8 @@ const SKINS = [
     name: 'INTERCEPTOR',
     stroke: '#ff5ce1',
     flame: 'rgba(255, 92, 225, 0.85)',
+    scale: 1,
+    pointsMultiplier: 1,
     body(ctx) {
       ctx.beginPath();
       ctx.moveTo( 18,  0);   // nariz
@@ -461,6 +468,8 @@ const SKINS = [
     name: 'CAZA',
     stroke: '#ffe14d',
     flame: 'rgba(255, 225, 77, 0.9)',
+    scale: 1,
+    pointsMultiplier: 1,
     body(ctx) {
       ctx.beginPath();
       ctx.moveTo( 20,  0);   // nariz
@@ -471,6 +480,25 @@ const SKINS = [
       ctx.lineTo(-15,  10);
       ctx.lineTo( -8,   4);
       ctx.lineTo(  4,  10);
+      ctx.closePath();
+      ctx.stroke();
+    },
+  },
+  {
+    id: 'goliath',
+    name: 'GOLIAT',
+    stroke: '#3ddc84',
+    flame: 'rgba(61, 220, 132, 0.9)',
+    scale: 2,
+    pointsMultiplier: 2,
+    // Misma silueta que la CLÁSICA pero verde y del doble de tamaño
+    // (el ctx ya va escalado por skin.scale en Ship.draw)
+    body(ctx) {
+      ctx.beginPath();
+      ctx.moveTo( 20,  0);   // nariz
+      ctx.lineTo(-12, -9);   // ala izquierda
+      ctx.lineTo( -7,  0);   // muesca trasera
+      ctx.lineTo(-12,  9);   // ala derecha
       ctx.closePath();
       ctx.stroke();
     },
@@ -489,6 +517,7 @@ function cycleSkin() {
   skinIndex = (skinIndex + 1) % SKINS.length;
   localStorage.setItem(SKIN_KEY, String(skinIndex));
   skinFlashTimer = 2;
+  if (ship) ship.radius = 12 * SKINS[skinIndex].scale;
 }
 
 // ── Estado del juego ──────────────────────────────────────────────────────────
@@ -602,7 +631,7 @@ function update(dt) {
       if (!a.dead && !b.dead && dist(b, a) < a.radius) {
         b.dead = true;
         a.dead = true;
-        score += a.fallingStar ? 200 : POINTS[a.size];
+        score += (a.fallingStar ? 200 : POINTS[a.size]) * SKINS[skinIndex].pointsMultiplier;
         explode(a.x, a.y, a.size * 5);
         spawnRandomPowerUp(a.x, a.y);
         newAsteroids.push(...a.split());
@@ -619,7 +648,7 @@ function update(dt) {
       if (dist(ship, a) < ship.radius + a.radius * 0.82) {
         if (ship.shieldTimer > 0) {
           // El escudo destruye el asteroide
-          score += a.fallingStar ? 200 : POINTS[a.size];
+          score += (a.fallingStar ? 200 : POINTS[a.size]) * SKINS[skinIndex].pointsMultiplier;
           explode(a.x, a.y, a.size * 5);
           newAsteroids.push(...a.split());
           a.dead = true;
