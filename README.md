@@ -45,4 +45,4 @@ Luego visita `http://localhost:3000`.
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
 - Power-ups aleatorios: velocidad (2x), escudo temporal que destruye asteroides al contacto y triple disparo
-- Skins de la nave (4 siluetas distintas) con `Tabulador`; la elección se guarda en `localStorage`
+- Skins de la nave (5 siluetas distintas) con `Tabulador`; la elección se guarda en `localStorage`. La skin **GOLIAT** es verde, tiene el doble de tamaño y otorga el doble de puntos al destruir asteroides
