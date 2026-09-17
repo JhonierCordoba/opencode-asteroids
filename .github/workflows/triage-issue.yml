@@ -5,6 +5,8 @@ on:
     types: [opened]
 
 permissions:
+  id-token: write
+  contents: read
   issues: write
 
 jobs:
@@ -12,7 +14,12 @@ jobs:
     if: github.event.issue.pull_request == null
     runs-on: ubuntu-latest
     steps:
-      - name: Auto-add labels por palabras clave
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Aplicar etiquetas
         uses: actions/github-script@v7
         with:
           script: |
@@ -27,16 +34,30 @@ jobs:
               { label: 'question', keywords: ['c\u00f3mo', 'como', 'duda', 'pregunta', 'question', 'ayuda', 'help', '?', '\u00bf'] }
             ];
 
-            const labels = rules
+            let labels = rules
               .filter(({ keywords }) => keywords.some((keyword) => text.includes(keyword)))
               .map(({ label }) => label);
 
+            const { owner, repo } = context.repo;
             if (labels.length === 0) {
-              console.log('No se detectaron etiquetas.');
-              return;
+              labels = ['needs-triage'];
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: 'needs-triage' });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name: 'needs-triage',
+                    color: 'fbca04',
+                    description: 'Requiere revisi\u00f3n inicial'
+                  });
+                } else {
+                  throw error;
+                }
+              }
             }
 
-            const { owner, repo } = context.repo;
             await github.rest.issues.addLabels({
               owner,
               repo,
@@ -45,38 +66,16 @@ jobs:
             });
             console.log('Etiquetas aplicadas: ' + labels.join(', '));
 
-      - name: Publicar comentario con contexto y estado del repositorio
-        uses: actions/github-script@v7
+      - name: Analizar issue y publicar gu\u00eda de implementaci\u00f3n
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          script: |
-            const { owner, repo } = context.repo;
-            const issue = context.payload.issue;
-
-            const repoInfo = await github.rest.repos.get({ owner, repo });
-            const commits = await github.rest.repos.listCommits({ owner, repo, per_page: 1 });
-            const lastCommit = commits.data[0];
-
-            const lines = [
-              '---',
-              `*Comentario autom\u00e1tico generado por el workflow \`triage-issue\`. No modifica el texto original del issue.*`,
-              '',
-              '### Contexto del proyecto',
-              '- Clon del cl\u00e1sico arcade **Asteroids** en HTML5 Canvas puro, sin dependencias ni bundler.',
-              '- Toda la l\u00f3gica del juego est\u00e1 en `game.js`; la pantalla se define en `index.html`.',
-              '- Para reproducir: abre `index.html` en el navegador o `npx serve .` y visita http://localhost:3000.',
-              '- Comenta con `/oc` o `/opencode` para que un agente de opencode resuelva el issue autom\u00e1ticamente.',
-              '',
-              '### Estado del repositorio',
-              `- Rama por defecto: \`${repoInfo.data.default_branch}\``,
-              `- \u00daltimo commit: \`${lastCommit.sha.slice(0, 7)}\` (${lastCommit.commit.message.split('\n')[0]}) — ${lastCommit.commit.author.date}`,
-              `- Autor del issue: @${issue.user.login} — creado el ${issue.created_at}`,
-              ''
-            ];
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issue.number,
-              body: lines.join('\n')
-            });
-            console.log('Comentario de triaje publicado.');
+          model: opencode/big-pickle
+          prompt: |
+            Analiza el issue reci\u00e9n creado y publica un \u00fanico comentario en espa\u00f1ol.
+            No abras ramas ni PRs; no modifiques el texto original del issue.
+            El comentario debe incluir:
+            1. Descripci\u00f3n detallada del issue: qu\u00e9 se pide, comportamiento esperado vs. actual y qu\u00e9 partes del juego afectan (revisa game.js e index.html).
+            2. Gu\u00eda de implementaci\u00f3n paso a paso: archivos a modificar, enfoque sugerido y trampas conocidas (por ejemplo, mantener sincronizados W/H en game.js con el tama\u00f1o del <canvas> de index.html).
+            3. Criterios de aceptaci\u00f3n para saber cu\u00e1ndo el issue est\u00e1 resuelto.
